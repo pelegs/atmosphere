@@ -51,7 +51,8 @@ def intersection(x1, x2, x3, x4,
     p2 = np.array([x2, y2])
     if c != 0.0:
         """
-        c = 0 means xxxxxx
+        c = 0 means that the
+        intersection point exists.
         """
         return a/c, b/c, p1 + (p2-p1)*(a/c)
     else:
@@ -63,6 +64,29 @@ def dist(p1, p2):
     between two points p1, p2
     """
     return np.linalg.norm(p2-p1)
+
+
+class TextOnScreen:
+    """
+    A class to display a text
+    on screen, at a chosen location,
+    font, size, etc.
+    """
+    def __init__(self, pos=(0,0), color=(0, 200, 0),
+                       font='Cabin', size=15, text=''):
+        self.pos = pos
+        self.color = color
+        self.font = pygame.font.SysFont(font, size)
+        self.text = text
+
+    def set_text(self, text):
+        self.text = text
+
+    def display(self, surface):
+        render = self.font.render(self.text,
+                                  False,
+                                  self.color)
+        surface.blit(render, self.pos)
 
 
 class Particle:
@@ -291,7 +315,13 @@ sn = max_y/nbars
 center = np.array([w/2, h/2])
 pygame.display.init()
 screen = pygame.display.set_mode((w, h))
+pygame.font.init()
 pygame.display.flip()
+
+gravity_status_text = 'Gravity: ' + gravity_status[G]
+status_text =  TextOnScreen(pos=(10,0),
+                            color=(0, 250, 120),
+                            text=gravity_status_text)
 
 # Main loop
 run = True
@@ -304,8 +334,8 @@ while run:
                 run = False
             if event.key == pygame.K_g:
                 G = not G
-                gravity_status_text = gravity_status[G]
-                print('Gravity:', gravity_status_text)
+                gravity_status_text = 'Gravity: ' + gravity_status[G]
+                status_text.set_text(gravity_status_text)
 
     # Place in grid
     grid.reset()
@@ -353,6 +383,7 @@ while run:
     for i, hbar in enumerate(hist):
         bar = np.array([max_x, sn*i, (w-max_x)*hbar, sn]).astype(int)
         pygame.draw.rect(screen, [0, 255, 0], bar)
+    status_text.display(screen)
     pygame.display.update()
 
 # Exit program
