@@ -7,8 +7,8 @@ from numpy import pi, sin, cos, sqrt
 import pygame
 
 
-gravity_status = {True: 'ON',
-                  False: 'OFF'}
+status_dict = {True: 'ON',
+               False: 'OFF'}
 
 
 def normalize(vec):
@@ -147,9 +147,6 @@ class Particle:
     def set_kinetic_energy(self, energy):
         self.vel = scale_vec(self.vel, np.sqrt(2*energy/self.mass))
 
-    def gravity(self, r):
-        return self.Gravity * self.mass / r**2
-
     def draw(self, surface):
         pygame.draw.circle(surface, self.color,
                            self.pos.astype(int),
@@ -239,11 +236,11 @@ def particle_interaction(p1, p2, dt):
     """
     Deals with interaction between two particles.
     """
-    distance = dist(p1.pos, p2.pos)
+    dr = p2.pos - p1.pos # points from p1 to p2
+    distance = np.linalg.norm(dr)
     if distance <= p1.radius + p2.radius:
         # If they collide - just Newtonian physics
         # (conservation of momentum and energy)
-        dr = p2.pos - p1.pos
         dv = p2.vel - p1.vel
         dR = np.dot(dv, dr) / np.dot(dr, dr) * dr
         M = p1.mass + p2.mass
@@ -252,6 +249,12 @@ def particle_interaction(p1, p2, dt):
             p2.pos += normalize(dr) * overlap
         p1.vel += (2*p2.mass/M * dR)
         p2.vel -= (2*p1.mass/M * dR)
+    elif LJ:
+        # Lennard-Jones potential
+        F12 = LJ_coeff * 12 / distance**13 * p1.radius**6 * (distance**6 - p1.radius**6)
+        F21 = LJ_coeff * 12 / distance**13 * p2.radius**6 * (distance**6 - p2.radius**6)
+        p1.add_acceleration(scale_vec(+dr, F12/p1.mass), dt)
+        p2.add_acceleration(scale_vec(-dr, F21/p2.mass), dt)
 
 
 def vel_cm(objects):
@@ -271,8 +274,10 @@ num_particles = 200
 w, h = 1200, 1000
 GRAVITY = np.array([0, 0.1])
 G = False
+LJ_coeff = 2E1
+LJ = False
 min_x = 0
-max_x = w - 200
+max_x = w - 700
 min_y = 0
 max_y = h
 balls = [Particle(pos='random',
@@ -285,7 +290,7 @@ balls = [Particle(pos='random',
 
 Ek = np.sum([b.get_kinetic_energy() for b in balls])
 for b in balls:
-    b.set_kinetic_energy(1E3/num_particles)
+    b.set_kinetic_energy(10/num_particles)
 
 w1 = Wall(start=np.array([min_x, min_y]),
           end=np.array([max_x, min_y]),
@@ -318,10 +323,12 @@ screen = pygame.display.set_mode((w, h))
 pygame.font.init()
 pygame.display.flip()
 
-gravity_status_text = 'Gravity: ' + gravity_status[G]
-status_text =  TextOnScreen(pos=(10,0),
-                            color=(0, 250, 120),
-                            text=gravity_status_text)
+gravity_status_text =  TextOnScreen(pos=(10,0),
+                                    color=(0, 250, 120),
+                                    text='Gravity: ' + status_dict[G])
+LJ_status_text =  TextOnScreen(pos=(10,20),
+                               color=(0, 250, 120),
+                               text='L-J: ' + status_dict[LJ])
 
 # Main loop
 run = True
@@ -334,8 +341,10 @@ while run:
                 run = False
             if event.key == pygame.K_g:
                 G = not G
-                gravity_status_text = 'Gravity: ' + gravity_status[G]
-                status_text.set_text(gravity_status_text)
+                gravity_status_text.set_text('gravity: ' + status_dict[G])
+            if event.key == pygame.K_l:
+                LJ = not LJ
+                LJ_status_text.set_text('L-J: ' + status_dict[LJ])
 
     # Place in grid
     grid.reset()
@@ -369,7 +378,11 @@ while run:
     #max_vel = np.max(vels)
 
     # Collect data
-    #Ek.append(np.sum([b.get_kinetic_energy() for b in balls]))
+    # Kinetic energy
+    Ek = np.sum([b.get_kinetic_energy() for b in balls])
+    print(Ek)
+
+    # Positions histogram
     ys = np.array([b.pos[1] for b in balls])
     hist, _ = np.histogram(ys, nbars)
     hist = hist / np.max(hist)
@@ -383,7 +396,8 @@ while run:
     for i, hbar in enumerate(hist):
         bar = np.array([max_x, sn*i, (w-max_x)*hbar, sn]).astype(int)
         pygame.draw.rect(screen, [0, 255, 0], bar)
-    status_text.display(screen)
+    gravity_status_text.display(screen)
+    LJ_status_text.display(screen)
     pygame.display.update()
 
 # Exit program
