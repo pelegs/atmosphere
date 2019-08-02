@@ -142,7 +142,7 @@ class Particle:
         self.speed = np.linalg.norm(self.vel)
 
     def get_kinetic_energy(self):
-        return 0.5*self.mass*self.vel**2
+        return 0.5*self.mass*np.linalg.norm(self.vel)**2
 
     def set_kinetic_energy(self, energy):
         self.vel = scale_vec(self.vel, np.sqrt(2*energy/self.mass))
@@ -228,8 +228,9 @@ class Grid:
     def add_object(self, p):
         cellx = int(np.floor(p.pos[0]/self.Lx))
         celly = int(np.floor(p.pos[1]/self.Ly))
-        self.objects[cellx][celly].append(p)
-        p.set_cell(cellx, celly)
+        if (0 <= cellx < self.Nx) and (0 <= celly < self.Ny):
+            self.objects[cellx][celly].append(p)
+            p.set_cell(cellx, celly)
 
 
 def particle_interaction(p1, p2, dt):
@@ -272,7 +273,8 @@ def vel_cm(objects):
 dt = 1.0
 num_particles = 200
 w, h = 1200, 1000
-GRAVITY = np.array([0, 0.1])
+g = 0.1
+GRAVITY = np.array([0, g])
 G = False
 LJ_coeff = 2E1
 LJ = False
@@ -329,6 +331,15 @@ gravity_status_text =  TextOnScreen(pos=(10,0),
 LJ_status_text =  TextOnScreen(pos=(10,20),
                                color=(0, 250, 120),
                                text='L-J: ' + status_dict[LJ])
+ke_text =  TextOnScreen(pos=(10,40),
+                        color=(0, 250, 120),
+                        text='')
+pe_text =  TextOnScreen(pos=(10,60),
+                        color=(0, 250, 120),
+                        text='')
+te_text =  TextOnScreen(pos=(10,80),
+                        color=(0, 250, 120),
+                        text='')
 
 # Main loop
 run = True
@@ -369,8 +380,9 @@ while run:
         b.move(dt)
         if not b.in_bounds(min_x, min_y,
                            max_x, max_y):
-            b.pos[0] = np.random.uniform(min_x, max_x)
-            b.pos[1] = np.random.uniform(min_y, max_y)
+            # TODO: Put in such height h that
+            # total energy is conserved
+            balls.remove(b)
 
     # Velocities (for coloring)
     #vels = np.array([b.speed for b in balls])
@@ -380,24 +392,44 @@ while run:
     # Collect data
     # Kinetic energy
     Ek = np.sum([b.get_kinetic_energy() for b in balls])
-    print(Ek)
+    ke_text.set_text('Kinetic energy = {:0.2f}'.format(Ek))
+    Ep = np.sum([b.mass * g * (max_y - b.pos[1]) for b in balls])
+    pe_text.set_text('Potential energy = {:0.2f}'.format(Ep))
+    Et = Ek + Ep
+    te_text.set_text('Total energy = {:0.2f}'.format(Et))
 
     # Positions histogram
     ys = np.array([b.pos[1] for b in balls])
     hist, _ = np.histogram(ys, nbars)
     hist = hist / np.max(hist)
 
-    # Drawing
+    """
+    Drawing
+    """
+    # Fill black
     screen.fill(3*[0])
+
+    # Balls
     for b in balls:
         b.draw(screen)
+
+    # Walls
     for wl in walls:
         wl.draw(screen)
+
+    # Display histogram
     for i, hbar in enumerate(hist):
         bar = np.array([max_x, sn*i, (w-max_x)*hbar, sn]).astype(int)
         pygame.draw.rect(screen, [0, 255, 0], bar)
+
+    # Display info
     gravity_status_text.display(screen)
     LJ_status_text.display(screen)
+    ke_text.display(screen)
+    pe_text.display(screen)
+    te_text.display(screen)
+
+    # Update screen
     pygame.display.update()
 
 # Exit program
