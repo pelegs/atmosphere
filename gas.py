@@ -415,7 +415,7 @@ pygame.display.update()
 ##################
 
 # Particles
-balls = [Particle(id=i,
+molecules = [Particle(id=i,
                   pos=np.zeros(2),
                   vel=np.random.uniform(-1, 1, 2),
                   mass=1,
@@ -425,14 +425,14 @@ balls = [Particle(id=i,
 
 # Distribute particles such
 # that they don't overlap
-distribute_no_overlaps(balls,
+distribute_no_overlaps(molecules,
                        min_x, min_y+550,
                        max_x, max_y)
 
 # Set initial kinetic energy
-Ek = np.sum([b.get_kinetic_energy() for b in balls])
-for b in balls:
-    b.set_kinetic_energy(500/num_particles)
+Ek = np.sum([m.get_kinetic_energy() for m in molecules])
+for m in molecules:
+    m.set_kinetic_energy(500/num_particles)
 
 # Walls
 walls = []
@@ -484,9 +484,9 @@ while run:
                 gravity_status_text.set_text('Gravity: ' + status_dict[GRAVITY])
         if event.type == pygame.MOUSEBUTTONUP:
             pos = pygame.mouse.get_pos()
-            for b in balls:
-                if dist(pos, b.pos) <= b.radius + 5:
-                    b.flip_selection_status()
+            for m in molecules:
+                if dist(pos, m.pos) <= m.radius + 5:
+                    m.flip_selection_status()
 
 
     ######################
@@ -495,15 +495,15 @@ while run:
 
     # Place in grid
     grid.reset()
-    for b in balls:
-        grid.add_object(b)
+    for m in molecules:
+        grid.add_object(m)
 
     # Create neighbor lists
-    for b in balls:
-        b.set_neighors(grid)
+    for m in molecules:
+        m.set_neighors(grid)
 
     # Physics
-    for b1 in balls:
+    for b1 in molecules:
         if GRAVITY:
             b1.gravity(yref, dt)
         for wl in walls:
@@ -512,12 +512,12 @@ while run:
             particle_interaction(b1, b2, dt)
 
     # Move
-    for b in balls:
-        b.move(dt)
-        if not (min_x <= b.pos[0] <= max_x):
-            b.pos[0] = np.random.uniform(min_x, max_x)
-        if b.pos[1] >= max_y:
-            balls.remove(b)
+    for m in molecules:
+        m.move(dt)
+        if not (min_x <= m.pos[0] <= max_x):
+            m.pos[0] = np.random.uniform(min_x, max_x)
+        if m.pos[1] >= max_y:
+            molecules.remove(m)
 
 
     ###################
@@ -525,12 +525,12 @@ while run:
     ###################
 
     # Kinetic energy
-    Ek = np.sum([b.get_kinetic_energy() for b in balls])
-    Ep = np.sum([b.get_potential_grav_energy(yref) for b in balls])
+    Ek = np.sum([m.get_kinetic_energy() for m in molecules])
+    Ep = np.sum([m.get_potential_grav_energy(yref) for m in molecules])
     Et = Ek + Ep
 
     # Positions histogram
-    ys = np.array([b.pos[1] for b in balls])
+    ys = np.array([m.pos[1] for m in molecules])
     hist, _ = np.histogram(ys, bins)
     hist = hist / np.max(hist)
 
@@ -547,8 +547,8 @@ while run:
         grid.draw(screen)
 
     # Balls
-    for b in balls:
-        b.draw(screen)
+    for m in molecules:
+        m.draw(screen)
 
     # Walls
     for wl in walls:
