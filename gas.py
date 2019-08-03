@@ -390,6 +390,7 @@ GRAVITY = False
 nbars = 30
 bins = np.linspace(min_y, max_y, nbars)
 sn = ((max_y - min_y)/nbars+1)
+total_histogram = np.zeros(nbars-1)
 
 # Display grid
 show_grid = False
@@ -533,6 +534,8 @@ while run:
     ys = np.array([m.pos[1] for m in molecules])
     hist, _ = np.histogram(ys, bins)
     hist = hist / np.max(hist)
+    if GRAVITY:
+        total_histogram += hist
 
 
     #####################
@@ -579,4 +582,9 @@ while run:
 ################
 
 pygame.quit()
+
+with open('histogram.data', 'w') as f:
+    for i, h in enumerate(total_histogram):
+        f.write('{} {}\n'.format(i, h))
+
 sys.exit()
