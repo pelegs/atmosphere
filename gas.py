@@ -33,6 +33,10 @@ def scale_vec(vec, size):
     new_vec = normalize(vec)
     return new_vec * size
 
+def get_angle(vec):
+    angle = np.arctan2(vec[1], vec[0])
+    return np.degrees(angle)
+
 def rotate(vec, angle):
     """
     returns vector rotated by angle
@@ -109,25 +113,18 @@ class Particle:
     """
     def __init__(self, pos, vel,
                  mass, radius,
-                 Gravity=False,
-                 color=[255, 255, 255]):
+                 Gravity=False):
 
-        if pos == 'random':
-            self.pos = np.random.uniform(low  = (min_x, min_y+400),
-                                         high = (max_x, max_y),
-                                         size = (1,2)).flatten()
-        else:
-            self.pos = pos
-
+        self.pos = pos
         self.vel = vel
         self.speed = np.linalg.norm(self.vel)
         self.mass = mass
         self.radius = radius
         self.Gravity = Gravity
 
-        self.color = color
-        self.old_color = self.color
         self.selected = False
+        self.image = pygame.image.load('images/gas_molecule.png')
+        self.arrow = pygame.image.load('images/arrow.png')
 
         self.cell = (-1, -1)
         self.neighbors = []
@@ -151,12 +148,17 @@ class Particle:
 
     def select(self):
         self.selected = True
-        self.old_color = self.color
-        self.color = [255, 255, 255]
+        self.image = pygame.image.load('images/gas_molecule_selected.png')
 
     def unselect(self):
         self.selected = False
-        self.color = self.old_color
+        self.image = pygame.image.load('images/gas_molecule.png')
+
+    def flip_selection_status(self):
+        if self.selected:
+            self.unselect()
+        else:
+            self.select()
 
     def gravity(self, yref, dt):
         r2 = (yref - self.pos[1])**2
@@ -181,12 +183,8 @@ class Particle:
         self.vel = scale_vec(self.vel, np.sqrt(2*energy/self.mass))
 
     def draw(self, surface):
-        pygame.draw.circle(surface, self.color,
-                           self.pos.astype(int),
-                           self.radius)
-        if self.selected:
-            vel_vec = self.vel * 40
-            pygame.draw.line(surface, [255, 0, 0], self.pos, (self.pos+vel_vec).astype(int), 4)
+        pos = (self.pos - np.array([self.radius/2, self.radius/2])).astype(int)
+        surface.blit(self.image, pos)
 
     def in_bounds(self, xmin, ymin, xmax, ymax):
         if xmin < self.pos[0] < xmax and ymin < self.pos[1] < ymax:
@@ -274,10 +272,10 @@ class Grid:
     def draw(self, surface):
         for i, row in enumerate(self.objects):
             for j, cell in enumerate(row):
-                pygame.draw.rect(surface, [100, 100, 100],
+                pygame.draw.rect(surface, [50, 0, 50],
                                  (i*self.Lx+min_x, j*self.Ly+min_y,
                                   self.Lx, self.Ly),
-                                 3)
+                                 2)
 
     def add_object(self, p):
         # Determine cell indeces
@@ -293,6 +291,24 @@ class Grid:
 ########################
 # Simulation functions #
 ########################
+
+def distribute_no_overlaps(particles):
+    """
+    Distributes particles such that they
+    do not oberlap eachother.
+    """
+    for i, p in enumerate(particles):
+        overlap = True
+        while overlap:
+            overlap = False
+            for j in range(i):
+                p2 = particles[j]
+                if dist(p.pos, p2.pos) <= (p.radius + p2.radius):
+                    overlap = True
+                    p.pos = np.random.uniform((min_x, min_y),
+                                              (max_x, max_y),
+                                              (1,2)).flatten()
+
 
 def particle_interaction(p1, p2, dt):
     """
@@ -370,21 +386,12 @@ sn = (max_y/nbars+1)
 show_grid = False
 
 # Status text setup
-gravity_status_text =  TextOnScreen(pos=(10,0),
-                                    color=(0, 250, 120),
-                                    text='Gravity: ' + status_dict[GRAVITY])
-ke_text =  TextOnScreen(pos=(10,20),
-                        color=(0, 250, 120),
-                        text='')
-pe_text =  TextOnScreen(pos=(10,40),
-                        color=(0, 250, 120),
-                        text='')
-te_text =  TextOnScreen(pos=(10,60),
-                        color=(0, 250, 120),
-                        text='')
-grid_text =  TextOnScreen(pos=(10,80),
-                          color=(0, 250, 120),
-                          text='')
+gravity_status_text = TextOnScreen(pos=(10,0),
+                                   color=(0, 250, 120),
+                                   text='Gravity: ' + status_dict[GRAVITY])
+grid_text = TextOnScreen(pos=(10,20),
+                         color=(0, 250, 120),
+                         text='')
 
 
 ##################
@@ -392,13 +399,16 @@ grid_text =  TextOnScreen(pos=(10,80),
 ##################
 
 # Particles
-balls = [Particle(pos='random',
+balls = [Particle(pos=np.zeros(2),
                   vel=np.random.uniform(-1, 1, 2),
                   mass=1,
                   radius=10,
-                  Gravity=True,
-                  color=[100, 200, 255])
+                  Gravity=True)
          for _ in range(num_particles)]
+
+# Distribute particles such
+# that they don't overlap
+distribute_no_overlaps(balls)
 
 # Set initial kinetic energy
 Ek = np.sum([b.get_kinetic_energy() for b in balls])
@@ -452,13 +462,12 @@ while run:
                 show_grid = not show_grid
             if event.key == pygame.K_g:
                 GRAVITY = not GRAVITY
-                gravity_status_text.set_text('gravity: ' + status_dict[GRAVITY])
+                gravity_status_text.set_text('Gravity: ' + status_dict[GRAVITY])
         if event.type == pygame.MOUSEBUTTONUP:
             pos = pygame.mouse.get_pos()
             for b in balls:
-                b.unselect()
-                if dist(pos, b.pos) < b.radius:
-                    b.select()
+                if dist(pos, b.pos) <= b.radius + 5:
+                    b.flip_selection_status()
 
 
     ######################
@@ -528,18 +537,12 @@ while run:
 
     # Display histogram
     for i, hbar in enumerate(hist):
-        bar = np.array([max_x+10, sn*i, (w-max_x)*hbar, sn-3]).astype(int)
+        bar = np.array([max_x+10, sn*i, (w-max_x-100)*hbar, sn-3]).astype(int)
         pygame.draw.rect(screen, [10, 250, 100], bar)
 
     # Display info
     gravity_status_text.display(screen)
-    ke_text.set_text('Kinetic energy = {:0.2f}'.format(Ek))
-    pe_text.set_text('Potential energy = {:0.2f}'.format(Ep))
-    te_text.set_text('Total energy = {:0.2f}'.format(Et))
     grid_text.set_text('Grid: {}'.format(status_dict[show_grid]))
-    ke_text.display(screen)
-    pe_text.display(screen)
-    te_text.display(screen)
     grid_text.display(screen)
 
     # Update screen
