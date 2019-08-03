@@ -50,7 +50,7 @@ def rotate(vec, angle):
 def intersection(x1, x2, x3, x4,
                  y1, y2, y3, y4):
     """
-    returns the intersecion
+    returns the intersection
     point of two line segments.
     (used for particle-wall interaction)
     """
@@ -70,7 +70,7 @@ def intersection(x1, x2, x3, x4,
 
 def dist(p1, p2):
     """
-    returns the Eucledian distance
+    returns the Euclidean distance
     between two points p1, p2
     """
     return np.linalg.norm(p2-p1)
@@ -83,11 +83,13 @@ class TextOnScreen:
     font, size, etc.
     """
     def __init__(self, pos=(0,0), color=(0, 200, 0),
-                       font='Cabin', size=15, text=''):
+                       font='Cabin', size=15, text='',
+                       centered=False):
         self.pos = pos
         self.color = color
         self.font = pygame.font.SysFont(font, size)
         self.text = text
+        self.centered = centered
 
     def set_text(self, text):
         self.text = text
@@ -96,7 +98,11 @@ class TextOnScreen:
         render = self.font.render(self.text,
                                   False,
                                   self.color)
-        surface.blit(render, self.pos)
+        if self.centered:
+            text_rect = render.get_rect(center=(w/2, h/2))
+            surface.blit(render, text_rect)
+        else:
+            surface.blit(render, self.pos)
 
 
 ###########
@@ -111,9 +117,11 @@ class Particle:
     It also exist in a cell, to reduce
     computational costs (i.e. "neighbor lists")
     """
-    def __init__(self, pos, vel,
+    def __init__(self, id, pos, vel,
                  mass, radius,
                  Gravity=False):
+
+        self.id = id
 
         self.pos = pos
         self.vel = vel
@@ -124,7 +132,6 @@ class Particle:
 
         self.selected = False
         self.image = pygame.image.load('images/gas_molecule.png')
-        self.arrow = pygame.image.load('images/arrow.png')
 
         self.cell = (-1, -1)
         self.neighbors = []
@@ -278,7 +285,7 @@ class Grid:
                                  2)
 
     def add_object(self, p):
-        # Determine cell indeces
+        # Determine cell indices
         cellx = int(np.floor((p.pos[0]-min_x)/self.Lx))
         celly = int(np.floor((p.pos[1]-min_y)/self.Ly))
 
@@ -292,22 +299,30 @@ class Grid:
 # Simulation functions #
 ########################
 
-def distribute_no_overlaps(particles):
+def distribute_no_overlaps(particles,
+                           min_x, min_y,
+                           max_x, max_y):
     """
     Distributes particles such that they
-    do not oberlap eachother.
+    do not overlap each other.
     """
+    # Initialize position of the first particle
+    particles[0].pos = np.array([(max_x+min_x)/2,
+                                 (max_y+min_y)/2])
+
+    # iteratively place each successive particle
+    # at a position that does not overlap with
+    # any of the previous particles
     for i, p in enumerate(particles):
         overlap = True
         while overlap:
             overlap = False
-            for j in range(i):
-                p2 = particles[j]
+            for p2 in particles[:i]:
+                p.pos = np.random.uniform((min_x, min_y),
+                                          (max_x, max_y),
+                                          (1,2)).flatten()
                 if dist(p.pos, p2.pos) <= (p.radius + p2.radius):
                     overlap = True
-                    p.pos = np.random.uniform((min_x, min_y),
-                                              (max_x, max_y),
-                                              (1,2)).flatten()
 
 
 def particle_interaction(p1, p2, dt):
@@ -327,12 +342,6 @@ def particle_interaction(p1, p2, dt):
             p2.pos += normalize(dr) * overlap
         p1.vel += (2*p2.mass/M * dR)
         p2.vel -= (2*p1.mass/M * dR)
-    #elif LJ:
-    #    # Lennard-Jones potential
-    #    F12 = LJ_coeff * 12 / distance**13 * p1.radius**6 * (distance**6 - p1.radius**6)
-    #    F21 = LJ_coeff * 12 / distance**13 * p2.radius**6 * (distance**6 - p2.radius**6)
-    #    p1.add_acceleration(scale_vec(+dr, F12/p1.mass), dt)
-    #    p2.add_acceleration(scale_vec(-dr, F21/p2.mass), dt)
 
 
 def vel_cm(objects):
@@ -369,8 +378,8 @@ num_particles = 200
 # Used for the containing box
 min_x = 200
 max_x = w - 600
-min_y = 0
-max_y = h
+min_y = 50
+max_y = h - 50
 
 # Gravity related parameters
 G = 1.5E4
@@ -380,7 +389,7 @@ GRAVITY = False
 # Height histogram parameters
 nbars = 30
 bins = np.linspace(min_y, max_y, nbars)
-sn = (max_y/nbars+1)
+sn = ((max_y - min_y)/nbars+1)
 
 # Display grid
 show_grid = False
@@ -392,6 +401,13 @@ gravity_status_text = TextOnScreen(pos=(10,0),
 grid_text = TextOnScreen(pos=(10,20),
                          color=(0, 250, 120),
                          text='')
+startup_text = TextOnScreen(pos=(0,h//2),
+                            color=(255, 255, 255),
+                            size=50,
+                            text='Initializing starting positions...',
+                            centered=True)
+startup_text.display(screen)
+pygame.display.update()
 
 
 ##################
@@ -399,16 +415,19 @@ grid_text = TextOnScreen(pos=(10,20),
 ##################
 
 # Particles
-balls = [Particle(pos=np.zeros(2),
+balls = [Particle(id=i,
+                  pos=np.zeros(2),
                   vel=np.random.uniform(-1, 1, 2),
                   mass=1,
                   radius=10,
                   Gravity=True)
-         for _ in range(num_particles)]
+         for i in range(num_particles)]
 
 # Distribute particles such
 # that they don't overlap
-distribute_no_overlaps(balls)
+distribute_no_overlaps(balls,
+                       min_x, min_y+550,
+                       max_x, max_y)
 
 # Set initial kinetic energy
 Ek = np.sum([b.get_kinetic_energy() for b in balls])
@@ -497,7 +516,7 @@ while run:
         b.move(dt)
         if not (min_x <= b.pos[0] <= max_x):
             b.pos[0] = np.random.uniform(min_x, max_x)
-        if b.pos[1] <= min_y:
+        if b.pos[1] >= max_y:
             balls.remove(b)
 
 
@@ -537,13 +556,19 @@ while run:
 
     # Display histogram
     for i, hbar in enumerate(hist):
-        bar = np.array([max_x+10, sn*i, (w-max_x-100)*hbar, sn-3]).astype(int)
+        bar = np.array([max_x+10, sn*(i+1.7), (w-max_x-100)*hbar, sn-3]).astype(int)
         pygame.draw.rect(screen, [10, 250, 100], bar)
 
     # Display info
     gravity_status_text.display(screen)
     grid_text.set_text('Grid: {}'.format(status_dict[show_grid]))
     grid_text.display(screen)
+
+    # Black line between box and histogram
+    pygame.draw.line(screen, [0]*3,
+                     (max_x+6, min_y),
+                     (max_x+6, max_y),
+                     5)
 
     # Update screen
     pygame.display.update()
