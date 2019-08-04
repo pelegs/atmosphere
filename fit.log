@@ -1,0 +1,120 @@
+
+
+*******************************************************************************
+Sat Aug  3 19:04:42 2019
+
+
+FIT:    data read from "histogram.data" u 1:2
+        format = x:z
+        #datapoints = 29
+        residuals are weighted equally (unit weight)
+
+function used for fitting: f(x)
+	f(x) = a*exp(-b*x)
+fitted parameters initialized with current variable values
+
+iter      chisq       delta/lim  lambda   a             b            
+   0 2.9110689795e+07   0.00e+00  1.55e-01    1.000000e+00   1.000000e+00
+
+Current data point
+=========================
+#               = 2 out of 29
+x               = 331.17         
+z               = 403.375        
+
+Current set of parameters
+=========================
+a               = 331.17         
+b               = -1281.85       
+
+BREAK: Undefined value during function evaluation
+
+*******************************************************************************
+Sat Aug  3 19:05:04 2019
+
+
+FIT:    data read from "histogram.data" u 1:2
+        format = x:z
+        #datapoints = 29
+        residuals are weighted equally (unit weight)
+
+function used for fitting: f(x)
+	f(x) = a*exp(b*x)
+fitted parameters initialized with current variable values
+
+iter      chisq       delta/lim  lambda   a             b            
+   0 2.8970646764e+07   0.00e+00  4.35e+01    3.311696e+02  -1.281854e+03
+BREAK: Singular matrix in Invert_RtR
+
+*******************************************************************************
+Sat Aug  3 19:05:25 2019
+
+
+FIT:    data read from "histogram.data" u 1:2
+        format = x:z
+        #datapoints = 29
+        residuals are weighted equally (unit weight)
+
+function used for fitting: f(x)
+	f(x) = a*exp(b*x)+c
+fitted parameters initialized with current variable values
+
+iter      chisq       delta/lim  lambda   a             b             c            
+   0 2.8917122518e+07   0.00e+00  4.06e+01    3.789012e+02  -1.283136e+03   1.000000e+00
+BREAK: Singular matrix in Invert_RtR
+
+*******************************************************************************
+Sat Aug  3 19:06:11 2019
+
+
+FIT:    data read from "histogram.data" u 1:2
+        format = x:z
+        #datapoints = 29
+        residuals are weighted equally (unit weight)
+
+function used for fitting: f(x)
+	f(x) = a*exp(b*x)+c
+fitted parameters initialized with current variable values
+
+iter      chisq       delta/lim  lambda   a             b             c            
+   0 5.4941204377e+06   0.00e+00  5.32e+02   -5.367225e+02  -1.283136e+03   9.165394e+02
+BREAK: Singular matrix in Invert_RtR
+
+*******************************************************************************
+Sat Aug  3 19:06:28 2019
+
+
+FIT:    data read from "histogram.data" u 1:2
+        format = x:z
+        #datapoints = 29
+        residuals are weighted equally (unit weight)
+
+function used for fitting: f(x)
+	f(x) = a*x**3 + b*x**2 + c*x + d
+fitted parameters initialized with current variable values
+
+iter      chisq       delta/lim  lambda   a             b             c             d            
+   0 7.5238515153e+14   0.00e+00  2.34e+06   -5.367279e+02  -1.283136e+03   9.165501e+02   1.000000e+00
+  10 6.7388989526e+04  -7.91e-06  2.34e-04    1.147859e-02   1.368126e+00   4.673789e+00   4.025173e+02
+
+After 10 iterations the fit converged.
+final sum of squares of residuals : 67389
+rel. change during last iteration : -7.9054e-11
+
+degrees of freedom    (FIT_NDF)                        : 25
+rms of residuals      (FIT_STDFIT) = sqrt(WSSR/ndf)    : 51.9188
+variance of residuals (reduced chisquare) = WSSR/ndf   : 2695.56
+
+Final set of parameters            Asymptotic Standard Error
+=======================            ==========================
+a               = 0.0114786        +/- 0.02109      (183.8%)
+b               = 1.36813          +/- 0.8992       (65.73%)
+c               = 4.67379          +/- 10.73        (229.5%)
+d               = 402.517          +/- 34.07        (8.464%)
+
+correlation matrix of the fit parameters:
+                a      b      c      d      
+a               1.000 
+b              -0.985  1.000 
+c               0.909 -0.965  1.000 
+d              -0.608  0.697 -0.834  1.000 

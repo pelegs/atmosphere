@@ -117,9 +117,13 @@ class Particle:
     It also exist in a cell, to reduce
     computational costs (i.e. "neighbor lists")
     """
-    def __init__(self, id, pos, vel,
-                 mass, radius,
-                 Gravity=False):
+    def __init__(self, id=-1,
+                 pos=np.zeros(2),
+                 vel=np.zeros(2),
+                 mass=1,
+                 radius=5,
+                 Gravity=False,
+                 color='blue'):
 
         self.id = id
 
@@ -130,8 +134,9 @@ class Particle:
         self.radius = radius
         self.Gravity = Gravity
 
+        self.color = color
         self.selected = False
-        self.image = pygame.image.load('images/gas_molecule.png')
+        self.image = pygame.image.load('images/gas_molecule_{}.png'.format(color))
 
         self.cell = (-1, -1)
         self.neighbors = []
@@ -155,11 +160,11 @@ class Particle:
 
     def select(self):
         self.selected = True
-        self.image = pygame.image.load('images/gas_molecule_selected.png')
+        self.image = pygame.image.load('images/gas_molecule_white.png')
 
     def unselect(self):
         self.selected = False
-        self.image = pygame.image.load('images/gas_molecule.png')
+        self.image = pygame.image.load('images/gas_molecule_{}.png'.format(self.color))
 
     def flip_selection_status(self):
         if self.selected:
@@ -295,6 +300,31 @@ class Grid:
             p.set_cell(cellx, celly)
 
 
+#######################
+# Load data from file #
+#######################
+
+def generate_particles_from_file(filename):
+    particles = []
+    params = np.loadtxt(filename, dtype=str)
+
+    # Reshape params in case there is
+    # only one line is file
+    if params.shape == (4, ):
+        params = params[:,np.newaxis].T
+
+    for row in params:
+        p = [Particle(id = i,
+                      vel = np.random.uniform(-1, 1, 2),
+                      mass = float(row[1]),
+                      radius = float(row[2]),
+                      color = row[3])
+             for i in range(int(row[0]))]
+        particles += p
+
+    return particles
+
+
 ########################
 # Simulation functions #
 ########################
@@ -416,13 +446,7 @@ pygame.display.update()
 ##################
 
 # Particles
-molecules = [Particle(id=i,
-                  pos=np.zeros(2),
-                  vel=np.random.uniform(-1, 1, 2),
-                  mass=1,
-                  radius=10,
-                  Gravity=True)
-         for i in range(num_particles)]
+molecules = generate_particles_from_file('uniform.atm')
 
 # Distribute particles such
 # that they don't overlap
