@@ -2,16 +2,85 @@
 # -*- coding: iso-8859-15 -*-
 
 from os.path import isfile
-import sys
+from sys import exit, argv
+from json import load
 import numpy as np
 from numpy import pi, sin, cos, sqrt
 import pygame
-from draw import create_image
+from draw import create_image, html2rgb
 
 
 # For displaying data on screen
 status_dict = {True: 'ON',
                False: 'OFF'}
+
+
+#############################
+# Load parameters from file #
+#############################
+
+def load_params(file):
+    with open(file, 'r') as jsonfile:
+        params = load(jsonfile)
+
+    # Define params as global
+    global w, h
+    global min_x, max_x, min_y, max_y
+    global min_x0, max_x0, min_y0, max_y0
+    global molecules, walls, grid
+
+    # Screen parameters
+    w = params['screen']['width']
+    h = params['screen']['height']
+
+    # Area parameters
+    min_x = params['area']['min_x']
+    max_x = params['area']['max_x']
+    min_y = params['area']['min_y']
+    max_y = params['area']['max_y']
+
+    # Initial distribution
+    # area of particles
+    min_x0 = params['init']['min_x']
+    max_x0 = params['init']['max_x']
+    min_y0 = params['init']['min_y']
+    max_y0 = params['init']['max_y']
+
+    # Molecules
+    molecules = []
+    for group in params['molecules']:
+        molecules += [Particle(vel = np.random.uniform(-1, 1, 2),
+                               mass = group['mass'],
+                               radius = group['radius'],
+                               color = group['color'])
+                      for i in range(group['num_particles'])]
+
+    # Distribute molecules in init
+    # area with no overlaps
+    distribute_no_overlaps(molecules,
+                           min_x, min_y+550,
+                           max_x, max_y)
+
+    # Set initial kinetic energy
+    kinetic_energy = params['kinetic_energy']
+    Ek = np.sum([m.get_kinetic_energy() for m in molecules])
+    for m in molecules:
+        m.set_kinetic_energy(kinetic_energy / num_particles)
+
+    # Walls
+    walls = []
+    for wall in params['walls']:
+        start = np.array(wall['start'])
+        end = np.array(wall['end'])
+        width = np.array(wall['width'])
+        color = html2rgb(wall['color'])
+        walls.append(Wall(start, end, width, color))
+
+    # Grid
+    grid = Grid(params['grid']['Nx'], params['grid']['Ny'],
+                min_x, min_y,
+                max_x, max_y)
+
 
 
 ###########################
@@ -305,31 +374,6 @@ class Grid:
             p.set_cell(cellx, celly)
 
 
-#######################
-# Load data from file #
-#######################
-
-def generate_particles_from_file(filename):
-    particles = []
-    params = np.loadtxt(filename, dtype=str)
-
-    # Reshape params in case there is
-    # only one line is file
-    if params.shape == (4, ):
-        params = params[:,np.newaxis].T
-
-    for row in params:
-        p = [Particle(id = i,
-                      vel = np.random.uniform(-1, 1, 2),
-                      mass = float(row[1]),
-                      radius = float(row[2]),
-                      color = row[3])
-             for i in range(int(row[0]))]
-        particles += p
-
-    return particles
-
-
 ########################
 # Simulation functions #
 ########################
@@ -450,45 +494,7 @@ pygame.display.update()
 # Set up objects #
 ##################
 
-# Particles
-filename = sys.argv[1]
-molecules = generate_particles_from_file(filename)
-
-# Distribute particles such
-# that they don't overlap
-distribute_no_overlaps(molecules,
-                       min_x, min_y+550,
-                       max_x, max_y)
-
-# Set initial kinetic energy
-Ek = np.sum([m.get_kinetic_energy() for m in molecules])
-for m in molecules:
-    m.set_kinetic_energy(500/num_particles)
-
-# Walls
-walls = []
-walls.append(Wall(start=np.array([min_x, min_y]),
-                  end=np.array([max_x, min_y]),
-                  width=4,
-                  color=[255,255,255]))
-walls.append(Wall(start=np.array([min_x, min_y]),
-                  end=np.array([min_x, max_y]),
-                  width=4,
-                  color=[255,255,255]))
-walls.append(Wall(start=np.array([max_x, max_y]),
-                  end=np.array([min_x, max_y]),
-                  width=4,
-                  color=[255,255,255]))
-walls.append(Wall(start=np.array([max_x, max_y]),
-                  end=np.array([max_x, min_y]),
-                  width=4,
-                  color=[255,255,255]))
-
-# Grid
-grid = Grid(10, 20,
-            min_x, min_y,
-            max_x, max_y)
-
+load_params(argv[1])
 
 #############
 # Main loop #
@@ -617,4 +623,4 @@ with open('histogram.data', 'w') as f:
     for i, h in enumerate(total_histogram):
         f.write('{} {}\n'.format(i, h))
 
-sys.exit()
+exit()
