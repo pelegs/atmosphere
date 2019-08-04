@@ -25,6 +25,7 @@ def load_params(file):
 
     # Define params as global
     global w, h
+    global dt, yref, G, bins, sn, nbars, GRAVITY
     global min_x, max_x, min_y, max_y
     global min_x0, max_x0, min_y0, max_y0
     global molecules, walls, grid
@@ -32,6 +33,13 @@ def load_params(file):
     # Screen parameters
     w = params['screen']['width']
     h = params['screen']['height']
+
+    # Simulation parameters
+    dt = params['dt']
+    yref = params['yref']
+    G = params['G']
+    nbars = params['nbars']
+    GRAVITY = params['GRAVITY']
 
     # Area parameters
     min_x = params['area']['min_x']
@@ -54,6 +62,7 @@ def load_params(file):
                                radius = group['radius'],
                                color = group['color'])
                       for i in range(group['num_particles'])]
+    num_molecules = len(molecules)
 
     # Distribute molecules in init
     # area with no overlaps
@@ -65,7 +74,7 @@ def load_params(file):
     kinetic_energy = params['kinetic_energy']
     Ek = np.sum([m.get_kinetic_energy() for m in molecules])
     for m in molecules:
-        m.set_kinetic_energy(kinetic_energy / num_particles)
+        m.set_kinetic_energy(kinetic_energy / num_molecules)
 
     # Walls
     walls = []
@@ -81,6 +90,9 @@ def load_params(file):
                 min_x, min_y,
                 max_x, max_y)
 
+    # Histogram
+    bins = np.linspace(min_y, max_y, nbars+1)
+    sn = (max_y - min_y) / nbars
 
 
 ###########################
@@ -145,6 +157,14 @@ def dist(p1, p2):
     between two points p1, p2
     """
     return np.linalg.norm(p2-p1)
+
+def cross(v1, v2):
+    return (v1[0]*v2[1] - v1[1]*v2[0])
+
+def distance_point_wall(p, wall):
+    AP = p - wall.start
+    u = wall.dir
+    return np.abs(cross(AP, u))
 
 
 ###########
@@ -280,12 +300,8 @@ class Particle:
 
     def wall_collision(self, w, dt):
         if w.active:
-            next_pos = self.pos + self.vel*dt + scale_vec(self.vel, self.radius)
-            ta, tb, intersection_point = intersection(self.pos[0], next_pos[0],
-                                                      w.start[0], w.end[0],
-                                                      self.pos[1], next_pos[1],
-                                                      w.start[1], w.end[1])
-            if 0 <= ta <= 1 and 0 <= tb <= 1:
+            next_pos = self.pos + self.vel*dt
+            if distance_point_wall(next_pos, w) <= self.radius:
                 self.vel = self.vel - 2 * (np.dot(self.vel, w.normal)) * w.normal
                 return True
             else:
@@ -410,7 +426,8 @@ def particle_interaction(p1, p2, dt):
     """
     dr = p2.pos - p1.pos # points from p1 to p2
     distance = np.linalg.norm(dr)
-    if distance <= p1.radius + p2.radius:
+    R = p1.radius + p2.radius
+    if R/10 <= distance <= R:
         # If they collide - just Newtonian physics
         # (conservation of momentum and energy)
         dv = p2.vel - p1.vel
@@ -444,32 +461,19 @@ center = np.array([w/2, h/2])
 pygame.display.init()
 screen = pygame.display.set_mode((w, h))
 pygame.font.init()
+
+
+#########################
+# Simulation parameters #
+#########################
+
+load_params(argv[1])
 pygame.display.flip()
 
 
-#################################
-# Parameters for the simulation #
-#################################
-
-dt = 1.0
-num_particles = 200
-
-# Used for the containing box
-min_x = 200
-max_x = w - 600
-min_y = 50
-max_y = h - 50
-
-# Gravity related parameters
-G = 1.5E4
-yref = max_y + 1000
-GRAVITY = False
-
-# Height histogram parameters
-nbars = 30
-bins = np.linspace(min_y, max_y, nbars)
-sn = ((max_y - min_y)/nbars+1)
-total_histogram = np.zeros(nbars-1)
+################
+# Text objects #
+################
 
 # Display grid
 show_grid = False
@@ -490,11 +494,6 @@ startup_text.display(screen)
 pygame.display.update()
 
 
-##################
-# Set up objects #
-##################
-
-load_params(argv[1])
 
 #############
 # Main loop #
@@ -554,7 +553,8 @@ while run:
         if not (min_x <= m.pos[0] <= max_x):
             m.pos[0] = np.random.uniform(min_x, max_x)
         if m.pos[1] >= max_y:
-            molecules.remove(m)
+            m.pos[1] = max_y - m.radius - 1
+            m.vel = np.zeros(2)
 
 
     ###################
@@ -570,8 +570,6 @@ while run:
     ys = np.array([m.pos[1] for m in molecules])
     hist, _ = np.histogram(ys, bins)
     hist = hist / np.max(hist)
-    if GRAVITY:
-        total_histogram += hist
 
 
     #####################
@@ -617,10 +615,8 @@ while run:
 # Exit program #
 ################
 
+# Stop pygame
 pygame.quit()
 
-with open('histogram.data', 'w') as f:
-    for i, h in enumerate(total_histogram):
-        f.write('{} {}\n'.format(i, h))
-
+# Close program
 exit()

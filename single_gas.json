@@ -5,58 +5,51 @@
     },
 
     "area": {
-        "min_x": 200,
+        "min_x": 100,
         "max_x": 600,
         "min_y": 50,
         "max_y": 950
     },
 
     "init": {
-        "min_x": 250,
-        "max_x": 550,
-        "min_y": 200,
+        "min_x": 110,
+        "max_x": 590,
+        "min_y": 100,
         "max_y": 900
     },
 
-    "kinetic_energy": 100,
+    "dt": 1,
+    "yref": 1900,
+    "kinetic_energy": 500,
+    "G": 1E5,
+    "nbars": 30,
+    "GRAVITY": false,
 
     "molecules": [
         {
-            "num_particles": 150,
+            "num_particles": 750,
             "mass": 1,
-            "radius": 10,
+            "radius": 3,
             "color": "30AAFF"
-        },
-        {
-            "num_particles": 10,
-            "mass": 10,
-            "radius": 15,
-            "color": "00FFA0"
-        },    
-        {
-            "num_particles": 10,
-            "mass": 20,
-            "radius": 20,
-            "color": "FF00AF"
-        }    
+        }
     ],
 
     "walls": [
         {
-            "start": [200, 50],
+            "start": [100, 50],
             "end": [600, 50],
             "width": 4,
             "color": "FFFFFF"
         },
         {
-            "start": [200, 50],
-            "end": [200, 950],
+            "start": [100, 50],
+            "end": [100, 950],
             "width": 4,
             "color": "FFFFFF"
         },
         {
             "start": [600, 950],
-            "end": [200, 950],
+            "end": [100, 950],
             "width": 4,
             "color": "FFFFFF"
         },
@@ -69,7 +62,7 @@
     ],
 
     "grid": {
-        "Nx": 10,
-        "Ny": 20
+        "Nx": 150,
+        "Ny": 300
     }
 }
