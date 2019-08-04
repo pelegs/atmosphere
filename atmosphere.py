@@ -58,8 +58,8 @@ def load_params(file):
     # Distribute molecules in init
     # area with no overlaps
     distribute_no_overlaps(molecules,
-                           min_x, min_y+550,
-                           max_x, max_y)
+                           min_x0, min_y0,
+                           max_x0, max_y0)
 
     # Set initial kinetic energy
     kinetic_energy = params['kinetic_energy']
