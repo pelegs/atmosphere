@@ -141,7 +141,7 @@ class Particle:
         if not isfile('images/{}_{}.png'.format(int(radius), color)):
             create_image(color, radius)
             create_image('FFFFFF', radius)
-        self.image = pygame.image.load('images/{}_{}.png'.format(radius, color))
+        self.image = pygame.image.load('images/{}_{}.png'.format(int(radius), color))
 
         self.cell = (-1, -1)
         self.neighbors = []
@@ -451,7 +451,8 @@ pygame.display.update()
 ##################
 
 # Particles
-molecules = generate_particles_from_file('uniform.atm')
+filename = sys.argv[1]
+molecules = generate_particles_from_file(filename)
 
 # Distribute particles such
 # that they don't overlap
