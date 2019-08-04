@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: iso-8859-15 -*-
 
+from os.path import isfile
 import sys
 import numpy as np
 from numpy import pi, sin, cos, sqrt
 import pygame
+from draw import create_image
 
 
 # For displaying data on screen
@@ -76,6 +78,10 @@ def dist(p1, p2):
     return np.linalg.norm(p2-p1)
 
 
+###########
+# Classes #
+###########
+
 class TextOnScreen:
     """
     A class to display a text
@@ -105,10 +111,6 @@ class TextOnScreen:
             surface.blit(render, self.pos)
 
 
-###########
-# Classes #
-###########
-
 class Particle:
     """
     A particle with position, velocity, mass
@@ -136,7 +138,10 @@ class Particle:
 
         self.color = color
         self.selected = False
-        self.image = pygame.image.load('images/gas_molecule_{}.png'.format(color))
+        if not isfile('images/{}_{}.png'.format(int(radius), color)):
+            create_image(color, radius)
+            create_image('FFFFFF', radius)
+        self.image = pygame.image.load('images/{}_{}.png'.format(radius, color))
 
         self.cell = (-1, -1)
         self.neighbors = []
@@ -160,11 +165,11 @@ class Particle:
 
     def select(self):
         self.selected = True
-        self.image = pygame.image.load('images/gas_molecule_white.png')
+        self.image = pygame.image.load('images/{}_FFFFFF.png'.format(self.radius))
 
     def unselect(self):
         self.selected = False
-        self.image = pygame.image.load('images/gas_molecule_{}.png'.format(self.color))
+        self.image = pygame.image.load('images/{}_{}.png'.format(self.radius, self.color))
 
     def flip_selection_status(self):
         if self.selected:
