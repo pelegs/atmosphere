@@ -494,7 +494,6 @@ startup_text.display(screen)
 pygame.display.update()
 
 
-
 #############
 # Main loop #
 #############

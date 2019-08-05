@@ -1,0 +1,74 @@
+{
+    "screen": {
+        "width": 1200,
+        "height": 800
+    },
+
+    "area": {
+        "min_x": 100,
+        "max_x": 600,
+        "min_y": 50,
+        "max_y": 950
+    },
+
+    "init": {
+        "min_x": 110,
+        "max_x": 590,
+        "min_y": 100,
+        "max_y": 900
+    },
+
+    "dt": 1,
+    "yref": 1900,
+    "kinetic_energy": 500,
+    "G": 1E5,
+    "nbars": 30,
+    "GRAVITY": false,
+
+    "molecules": [
+        {
+            "num_particles": 550,
+            "mass": 1,
+            "radius": 3,
+            "color": "30AAFF"
+        },
+        {
+            "num_particles": 50,
+            "mass": 10,
+            "radius": 7,
+            "color": "FFAA30"
+        }
+    ],
+
+    "walls": [
+        {
+            "start": [100, 50],
+            "end": [600, 50],
+            "width": 4,
+            "color": "FFFFFF"
+        },
+        {
+            "start": [100, 50],
+            "end": [100, 950],
+            "width": 4,
+            "color": "FFFFFF"
+        },
+        {
+            "start": [600, 950],
+            "end": [100, 950],
+            "width": 4,
+            "color": "FFFFFF"
+        },
+        {
+            "start": [600, 950],
+            "end": [600, 50],
+            "width": 4,
+            "color": "FFFFFF"
+        }
+    ],
+
+    "grid": {
+        "Nx": 30,
+        "Ny": 60
+    }
+}
