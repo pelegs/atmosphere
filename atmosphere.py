@@ -15,89 +15,17 @@ status_dict = {True: 'ON',
                False: 'OFF'}
 
 
-#############################
-# Load parameters from file #
-#############################
+#####################
+# General functions #
+#####################
 
-def load_params(file):
-    with open(file, 'r') as jsonfile:
-        params = load(jsonfile)
-
-    # Define params as global
-    global w, h
-    global dt, yref, G, bins, sn, nbars, GRAVITY
-    global min_x, max_x, min_y, max_y
-    global min_x0, max_x0, min_y0, max_y0
-    global molecules, walls, grid
-
-    # Screen parameters
-    w = params['screen']['width']
-    h = params['screen']['height']
-
-    # Simulation parameters
-    dt = params['dt']
-    yref = params['yref']
-    G = params['G']
-    nbars = params['nbars']
-    GRAVITY = params['GRAVITY']
-
-    # Area parameters
-    min_x = params['area']['min_x']
-    max_x = params['area']['max_x']
-    min_y = params['area']['min_y']
-    max_y = params['area']['max_y']
-
-    # Initial distribution
-    # area of particles
-    min_x0 = params['init']['min_x']
-    max_x0 = params['init']['max_x']
-    min_y0 = params['init']['min_y']
-    max_y0 = params['init']['max_y']
-
-    # Molecules
-    molecules = []
-    for group in params['molecules']:
-        molecules += [Particle(vel = np.random.uniform(-1, 1, 2),
-                               mass = group['mass'],
-                               radius = group['radius'],
-                               color = group['color'])
-                      for i in range(group['num_particles'])]
-    num_molecules = len(molecules)
-
-    # Distribute molecules in init
-    # area with no overlaps
-    distribute_no_overlaps(molecules,
-                           min_x0, min_y0,
-                           max_x0, max_y0)
-
-    # Set initial kinetic energy
-    kinetic_energy = params['kinetic_energy']
-    Ek = np.sum([m.get_kinetic_energy() for m in molecules])
-    for m in molecules:
-        m.set_kinetic_energy(kinetic_energy / num_molecules)
-
-    # Walls
-    walls = []
-    for wall in params['walls']:
-        start = np.array(wall['start'])
-        end = np.array(wall['end'])
-        width = np.array(wall['width'])
-        color = html2rgb(wall['color'])
-        walls.append(Wall(start, end, width, color))
-
-    # Grid
-    grid = Grid(params['grid']['Nx'], params['grid']['Ny'],
-                min_x, min_y,
-                max_x, max_y)
-
-    # Histogram
-    bins = np.linspace(min_y, max_y, nbars+1)
-    sn = (max_y - min_y) / nbars
+def flatten_list(lst):
+    return [item for sublist in lst for item in sublist]
 
 
-###########################
-# General maths functions #
-###########################
+###################
+# Maths functions #
+###################
 
 def normalize(vec):
     """
@@ -390,6 +318,89 @@ class Grid:
             p.set_cell(cellx, celly)
 
 
+#############################
+# Load parameters from file #
+#############################
+
+def load_params(file):
+    global params
+    with open(file, 'r') as jsonfile:
+        params = load(jsonfile)
+
+    # Define params as global
+    global w, h
+    global dt, yref, G, GRAVITY, bins, sn, nbars, hist
+    global min_x, max_x, min_y, max_y
+    global min_x0, max_x0, min_y0, max_y0
+    global groups, molecules, walls, grid
+
+    # Screen parameters
+    w = params['screen']['width']
+    h = params['screen']['height']
+
+    # Simulation parameters
+    dt = params['dt']
+    yref = params['yref']
+    G = params['G']
+    nbars = params['nbars']
+    GRAVITY = params['GRAVITY']
+
+    # Area parameters
+    min_x = params['area']['min_x']
+    max_x = params['area']['max_x']
+    min_y = params['area']['min_y']
+    max_y = params['area']['max_y']
+
+    # Initial distribution
+    # area of particles
+    min_x0 = params['init']['min_x']
+    max_x0 = params['init']['max_x']
+    min_y0 = params['init']['min_y']
+    max_y0 = params['init']['max_y']
+
+    # Molecules
+    groups = []
+    for group in params['molecules']:
+        groups.append([Particle(vel = np.random.uniform(-1, 1, 2),
+                                mass = group['mass'],
+                                radius = group['radius'],
+                                color = group['color'])
+                       for i in range(group['num_particles'])])
+    molecules = flatten_list(groups)
+    num_molecules = len(molecules)
+
+    # Distribute molecules in init
+    # area with no overlaps
+    distribute_no_overlaps(molecules,
+                           min_x0, min_y0,
+                           max_x0, max_y0)
+
+    # Set initial kinetic energy
+    kinetic_energy = params['kinetic_energy']
+    Ek = np.sum([m.get_kinetic_energy() for m in molecules])
+    for m in molecules:
+        m.set_kinetic_energy(kinetic_energy / num_molecules)
+
+    # Walls
+    walls = []
+    for wall in params['walls']:
+        start = np.array(wall['start'])
+        end = np.array(wall['end'])
+        width = np.array(wall['width'])
+        color = html2rgb(wall['color'])
+        walls.append(Wall(start, end, width, color))
+
+    # Grid
+    grid = Grid(params['grid']['Nx'], params['grid']['Ny'],
+                min_x, min_y,
+                max_x, max_y)
+
+    # Histogram
+    bins = np.linspace(min_y, max_y, nbars+1)
+    sn = (max_y - min_y) / nbars
+    hist = np.zeros((len(groups), bins.shape[0]-1))
+
+
 ########################
 # Simulation functions #
 ########################
@@ -450,6 +461,19 @@ def vel_cm(objects):
     velx = np.sum([object.vel[0] for object in objects])
     vely = np.sum([object.vel[1] for object in objects])
     return np.array([velx, vely])
+
+
+def generate_histograms():
+    global hist
+    max_elements = []
+
+    ys = [np.array([m.pos[1] for m in group])
+                             for group in groups]
+    for i, y_pos in enumerate(ys):
+        hist[i], _ = np.histogram(y_pos, bins)
+        max_elements.append(np.max(hist))
+
+    hist /= np.max(max_elements)
 
 
 #####################
@@ -566,9 +590,7 @@ while run:
     Et = Ek + Ep
 
     # Positions histogram
-    ys = np.array([m.pos[1] for m in molecules])
-    hist, _ = np.histogram(ys, bins)
-    hist = hist / np.max(hist)
+    generate_histograms()
 
 
     #####################
@@ -591,9 +613,12 @@ while run:
         wl.draw(screen)
 
     # Display histogram
-    for i, hbar in enumerate(hist):
-        bar = np.array([max_x+10, sn*(i+1.7), (w-max_x-100)*hbar, sn-3]).astype(int)
-        pygame.draw.rect(screen, [10, 250, 100], bar)
+    for i, histogram in enumerate(hist):
+        color = html2rgb(params['molecules'][i]['color'])
+        for j, hbar in enumerate(histogram):
+            if hbar != 0:
+                bar = np.array([max_x+10, sn*(j+1.7), (w-max_x-100)*hbar, sn-3]).astype(int)
+                pygame.draw.rect(screen, color, bar)
 
     # Display info
     gravity_status_text.display(screen)
